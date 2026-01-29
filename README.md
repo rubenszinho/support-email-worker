@@ -313,10 +313,20 @@ The Slack notification includes:
 ```
 support-email-worker/
 ├── src/
-│   └── worker.js          # Main email worker logic
-├── package.json           # Dependencies and scripts
-├── wrangler.jsonc         # Cloudflare Worker configuration
-└── README.md              # This file
+│   ├── worker.js              # Main entry point, routes requests
+│   ├── handlers/
+│   │   ├── form.js            # Contact form submission handler
+│   │   └── email.js           # Email routing handler
+│   ├── services/
+│   │   ├── slack.js           # Slack notifications
+│   │   ├── turnstile.js       # Cloudflare Turnstile verification
+│   │   └── mailchannels.js    # Auto-reply emails via MailChannels
+│   └── utils/
+│       ├── cors.js            # CORS headers and JSON response helper
+│       └── validation.js      # Input validation utilities
+├── package.json               # Dependencies and scripts
+├── wrangler.jsonc             # Cloudflare Worker configuration
+└── README.md                  # This file
 ```
 
 ## Error Handling
