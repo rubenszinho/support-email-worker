@@ -11,7 +11,7 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
-        headers: corsHeaders(env),
+        headers: corsHeaders(env, request),
       });
     }
 
@@ -24,10 +24,10 @@ export default {
 
     // Health check endpoint
     if (request.method === 'GET' && url.pathname === '/health') {
-      return jsonResponse({ status: 'ok' }, 200, env);
+      return jsonResponse({ status: 'ok' }, 200, env, request);
     }
 
-    return jsonResponse({ error: 'Not found' }, 404, env);
+    return jsonResponse({ error: 'Not found' }, 404, env, request);
   },
 
   /**
