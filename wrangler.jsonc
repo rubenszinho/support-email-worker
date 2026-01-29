@@ -3,5 +3,13 @@
   "main": "src/worker.js",
   "workers_dev": true,
   "preview_urls": false,
-  "compatibility_date": "2000-01-01"
+  "compatibility_date": "2000-01-01",
+  "vars": {
+    "SUPPORT_EMAIL": "support@example.com",
+    "SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/YOUR_WEBHOOK_URL",
+    "FORWARD_EMAIL_LIST": "user1@example.com,user2@example.com",
+    "ALLOWED_ORIGINS": "https://example.com,https://www.example.com",
+    "FROM_NAME": "Support Team",
+    "TURNSTILE_SECRET_KEY": ""
+  }
 }
