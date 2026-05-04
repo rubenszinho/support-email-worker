@@ -1,5 +1,6 @@
 import { jsonResponse } from '../utils/cors.js';
 import { validateFormData } from '../utils/validation.js';
+import { resolveSiteConfig } from '../utils/domain.js';
 import { verifyTurnstile } from '../services/turnstile.js';
 import { sendFormNotification } from '../services/slack.js';
 import { sendAutoReply } from '../services/mailchannels.js';
@@ -29,13 +30,14 @@ export async function handleFormSubmission(request, env) {
             }
         }
 
-        const slackSent = await sendFormNotification(data, env);
-        if (!slackSent) {
-            console.log('Failed to send Slack notification');
-        }
+        const site = resolveSiteConfig(request, env);
+
+        // Slack is optional — sendFormNotification no-ops if SLACK_WEBHOOK_URL is unset
+        // and logs its own errors. We don't propagate failures to the user.
+        await sendFormNotification(data, site, env);
 
         try {
-            await sendAutoReply(email, name, subject, env);
+            await sendAutoReply(email, name, subject, site, env);
         } catch (e) {
             console.log(`Failed to send auto-reply: ${e.message}`);
         }

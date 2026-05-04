@@ -1,18 +1,21 @@
 import PostalMime from 'postal-mime';
 import { sendEmailNotification } from '../services/slack.js';
+import { listKnownSupportEmails } from '../utils/domain.js';
 
 /**
- * Handle incoming support emails
+ * Handle incoming support emails.
+ * Accepts any address listed in DOMAIN_CONFIG (or the env.SUPPORT_EMAIL fallback)
+ * so a single worker can serve all configured portals.
  */
 export async function handleEmail(message, env) {
     const recipient = message.to.toLowerCase();
+    const accepted = listKnownSupportEmails(env);
 
-    if (recipient !== env.SUPPORT_EMAIL) {
+    if (!accepted.includes(recipient)) {
         message.setReject('Unknown address');
         return;
     }
 
-    // Parse and notify
     try {
         const parser = new PostalMime();
         const parsedEmail = await parser.parse(message.raw);
@@ -29,9 +32,11 @@ export async function handleEmail(message, env) {
         console.log(`Error parsing or sending email: ${e.message}`);
     }
 
-    // Forward to team members
-    const forwardList = env.FORWARD_EMAIL_LIST.split(',').map((email) => email.trim());
-    for (const email of forwardList) {
-        await message.forward(email);
+    // Forward to team members (single shared list — typically your personal inbox)
+    if (env.FORWARD_EMAIL_LIST) {
+        const forwardList = env.FORWARD_EMAIL_LIST.split(',').map((email) => email.trim()).filter(Boolean);
+        for (const email of forwardList) {
+            await message.forward(email);
+        }
     }
 }

@@ -8,6 +8,7 @@ Cloudflare Worker for handling support emails and contact form submissions with 
 - **Contact Form API**: HTTP endpoint for form submissions
 - **Spam Protection**: Cloudflare Turnstile + honeypot field
 - **Auto-Reply**: Automatic confirmation emails via MailChannels
+- **Multi-tenant**: One worker can serve multiple domains (rubrion.ai, rubenszinho.dev, samuelrubens.com, ...) — each with its own from-address — via the `DOMAIN_CONFIG` env var.
 
 ## Quick Start
 
@@ -19,14 +20,15 @@ npm run deploy   # Deploy to Cloudflare
 
 ## Environment Variables
 
-| Variable               | Required | Description                          |
-| ---------------------- | -------- | ------------------------------------ |
-| `SUPPORT_EMAIL`        | Yes      | Email address to intercept           |
-| `SLACK_WEBHOOK_URL`    | Yes      | Slack incoming webhook URL           |
-| `FORWARD_EMAIL_LIST`   | Yes      | Comma-separated forwarding emails    |
-| `ALLOWED_ORIGINS`      | No       | CORS allowed origins (default: `*`)  |
-| `FROM_NAME`            | No       | Auto-reply sender name               |
-| `TURNSTILE_SECRET_KEY` | No       | Turnstile secret for spam protection |
+| Variable               | Required                  | Description                                                                                                              |
+| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `SUPPORT_EMAIL`        | Fallback                  | Default support inbox; used when an Origin doesn't match `DOMAIN_CONFIG`                                                 |
+| `FROM_NAME`            | Fallback                  | Default auto-reply display name                                                                                          |
+| `SLACK_WEBHOOK_URL`    | No                        | Slack incoming webhook URL — leave empty to skip Slack notifications entirely                                            |
+| `FORWARD_EMAIL_LIST`   | No                        | Comma-separated recipients for forwarded support emails (only used by inbound email handler)                             |
+| `ALLOWED_ORIGINS`      | No                        | Extra CORS origins; `DOMAIN_CONFIG` hosts are auto-added (apex + www)                                                    |
+| `TURNSTILE_SECRET_KEY` | No                        | Turnstile secret for spam protection                                                                                     |
+| `DOMAIN_CONFIG`        | For multi-tenant          | JSON-encoded `{ "<host>": { "supportEmail": "...", "fromName": "..." } }`. Resolves per-domain from-address by `Origin`. |
 
 ### Configuration
 
@@ -36,14 +38,31 @@ npm run deploy   # Deploy to Cloudflare
 {
 	"vars": {
 		"SUPPORT_EMAIL": "support@example.com",
-		"SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/XXX/YYY/ZZZ",
-		"FORWARD_EMAIL_LIST": "user1@example.com,user2@example.com",
-		"ALLOWED_ORIGINS": "https://example.com",
 		"FROM_NAME": "Support Team",
+		"SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/XXX/YYY/ZZZ",
+		"FORWARD_EMAIL_LIST": "samuelrubenscontato@gmail.com",
+		"ALLOWED_ORIGINS": "",
 		"TURNSTILE_SECRET_KEY": "",
+		"DOMAIN_CONFIG": "{\"rubrion.ai\":{\"supportEmail\":\"hello@rubrion.ai\",\"fromName\":\"Rubrion\"},\"rubenszinho.dev\":{\"supportEmail\":\"contact@rubenszinho.dev\",\"fromName\":\"Samuel Rubens\"},\"samuelrubens.com\":{\"supportEmail\":\"contato@samuelrubens.com\",\"fromName\":\"Samuel Rubens\"}}",
 	},
 }
 ```
+
+### Multi-tenant routing
+
+The worker reads the request's `Origin` header, extracts the hostname, and looks it up in `DOMAIN_CONFIG`:
+
+- `https://rubrion.ai` → uses `hello@rubrion.ai` as the auto-reply from-address
+- `https://www.rubenszinho.dev` → matched against `rubenszinho.dev`, uses `contact@rubenszinho.dev`
+- `https://samuelrubens.com` → uses `contato@samuelrubens.com`
+- Anything else (curl, localhost, unknown referrer) → falls back to `SUPPORT_EMAIL` / `FROM_NAME`
+
+`FORWARD_EMAIL_LIST` is shared across all domains — typically your single personal Gmail. Slack notifications include the resolved site name so you can tell which portal the submission came from.
+
+For each domain you configure, you must:
+1. Set up Cloudflare Email Routing so `<supportEmail>` lands in this worker.
+2. Add `_mailchannels.<domain> TXT "v=mc1 cfid=<your-worker>.workers.dev"` so MailChannels accepts the from-address.
+3. Add the domain to the Turnstile site-key allow-list (one site key can cover all your domains).
 
 **Or via CLI (secrets):**
 

@@ -5,11 +5,27 @@
   "preview_urls": false,
   "compatibility_date": "2000-01-01",
   "vars": {
+    // Default fallback address. Used when an Origin doesn't match any DOMAIN_CONFIG key
+    // (e.g. local dev, curl tests). Per-domain overrides live in DOMAIN_CONFIG below.
     "SUPPORT_EMAIL": "support@example.com",
-    "SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/YOUR_WEBHOOK_URL",
-    "FORWARD_EMAIL_LIST": "user1@example.com,user2@example.com",
-    "ALLOWED_ORIGINS": "https://example.com,https://www.example.com",
+    // Default display name for auto-reply emails when no per-domain fromName is set.
     "FROM_NAME": "Support Team",
-    "TURNSTILE_SECRET_KEY": ""
+    // Slack incoming webhook for form-submission notifications. Optional —
+    // leave empty to skip Slack entirely.
+    "SLACK_WEBHOOK_URL": "",
+    // Recipients that incoming support emails are forwarded to. Single shared list
+    // (typically your personal Gmail). Comma-separated.
+    "FORWARD_EMAIL_LIST": "samuelrubenscontato@gmail.com, rubriontech@gmail.com",
+    // CORS allow-list. Origins from DOMAIN_CONFIG below are auto-included with
+    // both apex and www variants; this var is for any extras (e.g. preview URLs).
+    "ALLOWED_ORIGINS": "",
+    // Cloudflare Turnstile secret. Set via `wrangler secret put TURNSTILE_SECRET_KEY`.
+    "TURNSTILE_SECRET_KEY": "",
+    // Multi-tenant per-domain config. JSON-encoded string keyed by bare hostname
+    // (no protocol, no port). The resolver also matches `www.<host>` to the bare entry.
+    // Each value:
+    //   - supportEmail: from-address used in the auto-reply for that domain
+    //   - fromName:     display name used in the auto-reply for that domain
+    "DOMAIN_CONFIG": "{\"rubrion.ai\":{\"supportEmail\":\"hello@rubrion.ai\",\"fromName\":\"Rubrion\"},\"rubenszinho.dev\":{\"supportEmail\":\"contact@rubenszinho.dev\",\"fromName\":\"Samuel Rubens\"},\"samuelrubens.com\":{\"supportEmail\":\"contato@samuelrubens.com\",\"fromName\":\"Samuel Rubens\"}}"
   }
 }

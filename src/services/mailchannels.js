@@ -1,10 +1,17 @@
 const MAILCHANNELS_API_URL = 'https://api.mailchannels.net/tx/v1/send';
 
 /**
- * Send auto-reply email via MailChannels
+ * Send auto-reply email via MailChannels.
+ * `site` carries the per-domain `supportEmail` and `fromName` so each portal's
+ * reply comes from its own address.
  */
-export async function sendAutoReply(to, name, subject, env) {
-    const fromName = env.FROM_NAME || 'Support Team';
+export async function sendAutoReply(to, name, subject, site, env) {
+    const fromEmail = site?.supportEmail || env.SUPPORT_EMAIL;
+    const fromName = site?.fromName || env.FROM_NAME || 'Support Team';
+    if (!fromEmail) {
+        console.log('Auto-reply skipped: no supportEmail resolved for this request.');
+        return false;
+    }
     const replySubject = `Re: ${subject || 'Your contact form submission'}`;
 
     const response = await fetch(MAILCHANNELS_API_URL, {
@@ -17,7 +24,7 @@ export async function sendAutoReply(to, name, subject, env) {
                 },
             ],
             from: {
-                email: env.SUPPORT_EMAIL,
+                email: fromEmail,
                 name: fromName,
             },
             subject: replySubject,
