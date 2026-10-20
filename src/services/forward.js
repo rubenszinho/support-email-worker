@@ -8,8 +8,9 @@ import { sendInternalCopy } from './resend.js';
  * be a verified destination in Cloudflare → Email → Email Routing → Destination
  * addresses. Configure the binding in wrangler.jsonc under `send_email`.
  *
- * If the binding refuses (the site's domain has no Email Routing, e.g. its
- * mail is on Google Workspace), the copy goes out through Resend instead.
+ * Resend goes first when configured: the binding can accept a message and
+ * still drop it when the site's domain has Email Routing off (rubrion.ai mail
+ * is on Google Workspace). The binding is the fallback.
  *
  * Auto-reply to the form submitter is NOT handled here — that lives in
  * services/resend.js. Keeping the two paths separate so each can fail
@@ -50,7 +51,18 @@ export async function forwardSubmission(formData, site, env) {
     // One send per inbox, all at once.
     const sent = await Promise.all(
         recipients.map(async (to) => {
+            // Resend first: it reports failures. The binding is the fallback.
+            if (env.RESEND_API_KEY && env.RESEND_FROM_EMAIL) {
+                try {
+                    const id = await sendInternalCopy({ to, subject, text: body, replyTo: formData.email, fromName }, env);
+                    console.log(`Forwarded to ${to} via Resend (${id}).`);
+                    return true;
+                } catch (e) {
+                    console.log(`Forward to ${to} via Resend failed (${e.message}); trying send_email.`);
+                }
+            }
             try {
+                if (!env.FORWARD_EMAIL?.send) throw new Error('FORWARD_EMAIL binding not configured');
                 const raw = buildRfc822({
                     fromEmail,
                     fromName,
@@ -59,20 +71,12 @@ export async function forwardSubmission(formData, site, env) {
                     subject,
                     text: body,
                 });
-                if (!env.FORWARD_EMAIL?.send) throw new Error('FORWARD_EMAIL binding not configured');
                 await env.FORWARD_EMAIL.send(new EmailMessage(fromEmail, to, raw));
+                console.log(`Forwarded to ${to} via send_email.`);
                 return true;
             } catch (e) {
-                // The binding only sends from domains with Email Routing on;
-                // fall back to Resend so the copy still arrives.
-                console.log(`Forward to ${to} via send_email failed (${e.message}); trying Resend.`);
-                try {
-                    await sendInternalCopy({ to, subject, text: body, replyTo: formData.email, fromName }, env);
-                    return true;
-                } catch (e2) {
-                    console.log(`Forward to ${to} failed: ${e2.message}`);
-                    return false;
-                }
+                console.log(`Forward to ${to} failed: ${e.message}`);
+                return false;
             }
         }),
     );

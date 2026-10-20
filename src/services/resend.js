@@ -54,6 +54,7 @@ export async function sendAutoReply(toEmail, toName, subject, site, env) {
         console.log(`Resend auto-reply failed (${response.status}): ${detail}`);
         return false;
     }
+    console.log(`Auto-reply sent to submitter via Resend.`);
     return true;
 }
 
@@ -83,9 +84,10 @@ function getHtmlContent(name, fromName) {
 }
 
 /**
- * Internal copy of a submission via Resend. Used when the `send_email`
- * binding can't send from the site's domain (its mail is hosted elsewhere,
- * e.g. rubrion.ai on Google Workspace, so Email Routing is off there).
+ * Internal copy of a submission via Resend. Resend reports failures, while
+ * the `send_email` binding can accept a message and still drop it when the
+ * site's domain has Email Routing off (rubrion.ai mail is on Google
+ * Workspace). Returns the Resend email id.
  */
 export async function sendInternalCopy({ to, subject, text, replyTo, fromName }, env) {
     if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
@@ -108,4 +110,6 @@ export async function sendInternalCopy({ to, subject, text, replyTo, fromName },
     if (!response.ok) {
         throw new Error(`Resend ${response.status}: ${await safeBody(response)}`);
     }
+    const { id } = await response.json().catch(() => ({}));
+    return id;
 }
