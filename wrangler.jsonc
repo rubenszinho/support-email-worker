@@ -53,6 +53,6 @@
     //   - supportEmail: from-address used by the forward (send_email) sender
     //   - fromName:     display name used in both forward and Resend auto-reply
     //   - siteName:     optional human label used in forwarded subject prefix
-    "DOMAIN_CONFIG": "{\"rubrion.ai\":{\"supportEmail\":\"hello@rubrion.ai\",\"fromName\":\"Rubrion\"},\"rubenszinho.dev\":{\"supportEmail\":\"contact@rubenszinho.dev\",\"fromName\":\"Samuel Rubens\"},\"samuelrubens.com\":{\"supportEmail\":\"contato@samuelrubens.com\",\"fromName\":\"Samuel Rubens\"},\"rubrion.com.br\":{\"supportEmail\":\"ola@rubrion.com.br\",\"fromName\":\"Rubrion BR\"}}"
+    "DOMAIN_CONFIG": "{\"rubrion.ai\": {\"supportEmail\": \"hello@rubrion.ai\", \"fromName\": \"Rubrion\", \"logo\": \"https://rubrion.ai/email/rubrion-mark.png\", \"url\": \"https://rubrion.ai\", \"lang\": \"en\"}, \"rubenszinho.dev\": {\"supportEmail\": \"contact@rubenszinho.dev\", \"fromName\": \"Samuel Rubens\"}, \"samuelrubens.com\": {\"supportEmail\": \"contato@samuelrubens.com\", \"fromName\": \"Samuel Rubens\"}, \"rubrion.com.br\": {\"supportEmail\": \"ola@rubrion.com.br\", \"fromName\": \"Rubrion BR\", \"logo\": \"https://rubrion.ai/email/rubrion-mark.png\", \"url\": \"https://rubrion.com.br\", \"lang\": \"pt\"}}"
   }
 }

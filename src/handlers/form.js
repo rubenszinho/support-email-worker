@@ -48,7 +48,7 @@ export async function handleFormSubmission(request, env, ctx) {
             // Forward submission to internal inbox via Cloudflare send_email binding.
             forwardSubmission(data, site, env),
             // Auto-reply to submitter via Resend.
-            sendAutoReply(email, name, subject, site, env),
+            sendAutoReply(email, name, subject, site, env, message),
         ]).then((results) => {
             const labels = ['Forward', 'Auto-reply'];
             results.forEach((r, i) => {
