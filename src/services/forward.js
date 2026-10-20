@@ -18,7 +18,9 @@ import { sendInternalCopy } from './resend.js';
  * which doesn't allow arbitrary destinations).
  */
 export async function forwardSubmission(formData, site, env) {
-    const recipients = (env.FORWARD_EMAIL_LIST || '')
+    // A site can name its own inbox(es) (`forwardTo` in DOMAIN_CONFIG), so one
+    // copy lands in one place; otherwise the global FORWARD_EMAIL_LIST.
+    const recipients = (site?.forwardTo || env.FORWARD_EMAIL_LIST || '')
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
