@@ -47,25 +47,27 @@ export async function forwardSubmission(formData, site, env) {
         formData.message,
     ].join('\r\n');
 
-    let allOk = true;
-    for (const to of recipients) {
-        try {
-            const raw = buildRfc822({
-                fromEmail,
-                fromName,
-                to,
-                replyTo: formData.email,
-                subject,
-                text: body,
-            });
-            const message = new EmailMessage(fromEmail, to, raw);
-            await env.FORWARD_EMAIL.send(message);
-        } catch (e) {
-            console.log(`Forward to ${to} failed: ${e.message}`);
-            allOk = false;
-        }
-    }
-    return allOk;
+    // One send per inbox, all at once.
+    const sent = await Promise.all(
+        recipients.map(async (to) => {
+            try {
+                const raw = buildRfc822({
+                    fromEmail,
+                    fromName,
+                    to,
+                    replyTo: formData.email,
+                    subject,
+                    text: body,
+                });
+                await env.FORWARD_EMAIL.send(new EmailMessage(fromEmail, to, raw));
+                return true;
+            } catch (e) {
+                console.log(`Forward to ${to} failed: ${e.message}`);
+                return false;
+            }
+        }),
+    );
+    return sent.every(Boolean);
 }
 
 /**

@@ -19,7 +19,7 @@ export default {
 
     // POST /submit - Handle form submission
     if (request.method === 'POST' && url.pathname === '/submit') {
-      return handleFormSubmission(request, env);
+      return handleFormSubmission(request, env, ctx);
     }
 
     // Health check endpoint

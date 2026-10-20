@@ -2,7 +2,6 @@ import { jsonResponse } from '../utils/cors.js';
 import { validateFormData } from '../utils/validation.js';
 import { resolveSiteConfig } from '../utils/domain.js';
 import { verifyTurnstile } from '../services/turnstile.js';
-import { sendFormNotification } from '../services/slack.js';
 import { forwardSubmission } from '../services/forward.js';
 import { sendAutoReply } from '../services/resend.js';
 
@@ -17,10 +16,11 @@ import { sendAutoReply } from '../services/resend.js';
  *      verified sender domain (env.RESEND_FROM_EMAIL) since the free plan
  *      restricts to one domain.
  *
- * Slack notification stays optional. All three side-effects are wrapped so the
- * caller always gets a 200 once validation + Turnstile pass.
+ * The visitor gets a 200 as soon as
+ * validation + Turnstile pass; both sends then run in parallel
+ * after the response (ctx.waitUntil), so a slow mail API never holds the form.
  */
-export async function handleFormSubmission(request, env) {
+export async function handleFormSubmission(request, env, ctx) {
     try {
         const data = await request.json();
         const { name, email, subject, message, turnstileToken, honeypot } = data;
@@ -44,22 +44,19 @@ export async function handleFormSubmission(request, env) {
 
         const site = resolveSiteConfig(request, env);
 
-        // Slack ping (no-ops if SLACK_WEBHOOK_URL is unset).
-        await sendFormNotification(data, site, env);
-
-        // Forward submission to internal inbox via Cloudflare send_email binding.
-        try {
-            await forwardSubmission(data, site, env);
-        } catch (e) {
-            console.log(`Forward failed: ${e.message}`);
-        }
-
-        // Auto-reply to submitter via Resend.
-        try {
-            await sendAutoReply(email, name, subject, site, env);
-        } catch (e) {
-            console.log(`Auto-reply failed: ${e.message}`);
-        }
+        const deliver = Promise.allSettled([
+            // Forward submission to internal inbox via Cloudflare send_email binding.
+            forwardSubmission(data, site, env),
+            // Auto-reply to submitter via Resend.
+            sendAutoReply(email, name, subject, site, env),
+        ]).then((results) => {
+            const labels = ['Forward', 'Auto-reply'];
+            results.forEach((r, i) => {
+                if (r.status === 'rejected') console.log(`${labels[i]} failed: ${r.reason?.message ?? r.reason}`);
+            });
+        });
+        if (ctx?.waitUntil) ctx.waitUntil(deliver);
+        else await deliver;
 
         return jsonResponse({ success: true, message: 'Form submitted successfully' }, 200, env, request);
     } catch (e) {
