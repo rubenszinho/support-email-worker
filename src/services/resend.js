@@ -42,6 +42,8 @@ export async function sendAutoReply(toEmail, toName, subject, site, env, message
             body: JSON.stringify({
                 from: `${fromName} <${fromEmail}>`,
                 to: [toEmail],
+                // noreply@ has no mailbox: "just reply" reaches the site's inbox.
+                ...(site?.supportEmail ? { reply_to: site.supportEmail } : {}),
                 subject: replySubject,
                 text: getPlainTextContent(toName, fromName, site, message),
                 html: getHtmlContent(toName, fromName, site, message),
