@@ -81,3 +81,31 @@ function getHtmlContent(name, fromName) {
     <p>Best regards,<br>${fromName}</p>
   `;
 }
+
+/**
+ * Internal copy of a submission via Resend. Used when the `send_email`
+ * binding can't send from the site's domain (its mail is hosted elsewhere,
+ * e.g. rubrion.ai on Google Workspace, so Email Routing is off there).
+ */
+export async function sendInternalCopy({ to, subject, text, replyTo, fromName }, env) {
+    if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+        throw new Error('Resend not configured');
+    }
+    const response = await fetch(RESEND_API_URL, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            from: `${fromName} <${env.RESEND_FROM_EMAIL}>`,
+            to: [to],
+            reply_to: replyTo,
+            subject,
+            text,
+        }),
+    });
+    if (!response.ok) {
+        throw new Error(`Resend ${response.status}: ${await safeBody(response)}`);
+    }
+}

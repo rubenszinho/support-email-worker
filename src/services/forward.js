@@ -1,4 +1,5 @@
 import { EmailMessage } from 'cloudflare:email';
+import { sendInternalCopy } from './resend.js';
 
 /**
  * Forward a contact-form submission to the internal inbox(es) listed in
@@ -6,6 +7,9 @@ import { EmailMessage } from 'cloudflare:email';
  * (`env.FORWARD_EMAIL`). The binding is free, but each destination address must
  * be a verified destination in Cloudflare → Email → Email Routing → Destination
  * addresses. Configure the binding in wrangler.jsonc under `send_email`.
+ *
+ * If the binding refuses (the site's domain has no Email Routing, e.g. its
+ * mail is on Google Workspace), the copy goes out through Resend instead.
  *
  * Auto-reply to the form submitter is NOT handled here — that lives in
  * services/resend.js. Keeping the two paths separate so each can fail
@@ -20,10 +24,6 @@ export async function forwardSubmission(formData, site, env) {
 
     if (recipients.length === 0) {
         console.log('Forward skipped: FORWARD_EMAIL_LIST is empty.');
-        return false;
-    }
-    if (!env.FORWARD_EMAIL || typeof env.FORWARD_EMAIL.send !== 'function') {
-        console.log('Forward skipped: FORWARD_EMAIL binding not configured.');
         return false;
     }
 
@@ -59,11 +59,20 @@ export async function forwardSubmission(formData, site, env) {
                     subject,
                     text: body,
                 });
+                if (!env.FORWARD_EMAIL?.send) throw new Error('FORWARD_EMAIL binding not configured');
                 await env.FORWARD_EMAIL.send(new EmailMessage(fromEmail, to, raw));
                 return true;
             } catch (e) {
-                console.log(`Forward to ${to} failed: ${e.message}`);
-                return false;
+                // The binding only sends from domains with Email Routing on;
+                // fall back to Resend so the copy still arrives.
+                console.log(`Forward to ${to} via send_email failed (${e.message}); trying Resend.`);
+                try {
+                    await sendInternalCopy({ to, subject, text: body, replyTo: formData.email, fromName }, env);
+                    return true;
+                } catch (e2) {
+                    console.log(`Forward to ${to} failed: ${e2.message}`);
+                    return false;
+                }
             }
         }),
     );
