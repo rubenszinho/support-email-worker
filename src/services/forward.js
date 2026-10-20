@@ -54,7 +54,7 @@ export async function forwardSubmission(formData, site, env) {
             // Resend first: it reports failures. The binding is the fallback.
             if (env.RESEND_API_KEY && env.RESEND_FROM_EMAIL) {
                 try {
-                    const id = await sendInternalCopy({ to, subject, text: body, replyTo: formData.email, fromName }, env);
+                    const id = await sendInternalCopy({ to, subject, text: body, replyTo: formData.email, fromName, fromEmail: site?.replyFrom }, env);
                     console.log(`Forwarded to ${to} via Resend (${id}).`);
                     return true;
                 } catch (e) {

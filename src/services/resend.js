@@ -167,7 +167,7 @@ function getHtmlContent(name, fromName, site, message) {
  * site's domain has Email Routing off (rubrion.ai mail is on Google
  * Workspace). Returns the Resend email id.
  */
-export async function sendInternalCopy({ to, subject, text, replyTo, fromName }, env) {
+export async function sendInternalCopy({ to, subject, text, replyTo, fromName, fromEmail }, env) {
     if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
         throw new Error('Resend not configured');
     }
@@ -178,7 +178,7 @@ export async function sendInternalCopy({ to, subject, text, replyTo, fromName },
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            from: `${fromName} <${env.RESEND_FROM_EMAIL}>`,
+            from: `${fromName} <${fromEmail || env.RESEND_FROM_EMAIL}>`,
             to: [to],
             reply_to: replyTo,
             subject,
