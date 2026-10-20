@@ -20,7 +20,10 @@ export async function sendAutoReply(toEmail, toName, subject, site, env, message
         console.log('Auto-reply skipped: RESEND_API_KEY not set.');
         return false;
     }
-    const fromEmail = env.RESEND_FROM_EMAIL;
+    // A site can reply from a real mailbox (`replyFrom` in DOMAIN_CONFIG) so
+    // Gmail can show that Google account's photo; it must be on the Resend
+    // verified domain.
+    const fromEmail = site?.replyFrom || env.RESEND_FROM_EMAIL;
     if (!fromEmail) {
         console.log('Auto-reply skipped: RESEND_FROM_EMAIL not set.');
         return false;
